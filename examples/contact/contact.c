@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 
 	quit=0;
 
-	d = emokit_create();
+	d = emokit_create(EMOKIT_RESEARCH);
 	int count=emokit_get_count(d, EMOKIT_VID, EMOKIT_PID);
 	printf("Current epoc devices connected: %d\n", count );
 	int r = emokit_open(d, EMOKIT_VID, EMOKIT_PID, 1);

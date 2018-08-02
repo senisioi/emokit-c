@@ -1,5 +1,5 @@
 /* 
-	Simple example of sending an OSC message using oscpack.
+    Simple example of sending an OSC message using oscpack.
 */
 
 #include <cstdio>
@@ -7,78 +7,74 @@
 #include <cstdlib>
 #include <csignal>
 #include <iostream>
-#include "oscpack/osc/OscOutboundPacketStream.h"
-#include "oscpack/ip/UdpSocket.h"
+#include "../../include/oscpack/osc/OscOutboundPacketStream.h"
+#include "../../include/oscpack/ip/UdpSocket.h"
+
+extern "C"
+{
 #include "emokit/emokit.h"
+}
+
 
 #define ADDRESS "127.0.0.1"
 #define PORT 9997
 
 #define OUTPUT_BUFFER_SIZE 4096
-
-void sigproc(int i)
+ 
+int main(int argc, char **argv)
 {
-	std::cout << "closing epoc and quitting" << std::endl;
-	exit(0);
-}
-
-float conv(int v)
-{
-	return (v-8200)/8200.0;
-}
-
-int main(int argc, char* argv[])
-{
-	signal(SIGINT, sigproc);
-#ifndef WIN32
-	signal(SIGQUIT, sigproc);
-#endif
-
-	UdpTransmitSocket transmitSocket( IpEndpointName( ADDRESS, PORT ) );
-
-	char buffer[OUTPUT_BUFFER_SIZE];
-
-
-	FILE *input;
-	FILE *output;
-
-	char raw_frame[32];
-	struct emokit_frame frame;
+ 
 	emokit_device* d;
-	uint8_t data[32];
-
 	d = emokit_create();
-	printf("Current epoc devices connected: %d\n", emokit_get_count(d, EMOKIT_VID, EMOKIT_PID));
+
+	std::cout << "Current epoc devices connected " << emokit_get_count(d, EMOKIT_VID, EMOKIT_PID) << "\n";
 	if(emokit_open(d, EMOKIT_VID, EMOKIT_PID, 1) != 0)
 	{
-		printf("CANNOT CONNECT\n");
+		std::cout << "CANNOT CONNECT\n";
 		return 1;
 	}
+
+	UdpTransmitSocket transmitSocket( IpEndpointName( ADDRESS, PORT ) );    
+	char buffer[OUTPUT_BUFFER_SIZE];
+	char raw_frame[32];
+	struct emokit_frame frame;
+	
+	std::cout << "Connected\n";
 	while(1)
 	{
-		int r;
-		if((r=emokit_read_data_timeout(d, 1000)) > 0)
+		//std::cout << "Starting read\n";
+		if(emokit_read_data(d) > 0)
 		{
-			frame = emokit_get_next_frame(d);
+			struct emokit_frame c;
+			c = emokit_get_next_frame(d);
+			
 			osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
-			p << osc::BeginMessage( "/multiplot" )
-			  << conv(frame.F3) << conv(frame.FC6) << conv(frame.P7)
-			  << conv(frame.T8) << conv(frame.F7)  << conv(frame.F8)
-			  << conv(frame.T7) << conv(frame.P8)  << conv(frame.AF4)
-			  << conv(frame.F4) << conv(frame.AF3) << conv(frame.O2)
-			  << conv(frame.O1) << conv(frame.FC5) << osc::EndMessage;
-
+			p << osc::BeginMessage( "/emokit/channels" )
+			  << c.F3 << c.FC6 << c.P7 << c.T8 << c.F7 << c.F8 
+			  << c.T7 << c.P8 << c.AF4 << c.F4 << c.AF3 << c.O2 
+			  << c.O1 << c.FC5 
+			  << osc::EndMessage;
 			transmitSocket.Send( p.Data(), p.Size() );
-		} else if(r == 0)
-			fprintf(stderr, "Headset Timeout\n");
-		else {
-			fprintf(stderr, "Headset Error\n");
-			break;
+			
+			osc::OutboundPacketStream q( buffer, OUTPUT_BUFFER_SIZE );
+			q << osc::BeginMessage( "/emokit/gyro" ) 
+			  << (int)frame.gyroX << (int)frame.gyroY << osc::EndMessage;
+			transmitSocket.Send( q.Data(), q.Size() );
+
+			osc::OutboundPacketStream info( buffer, OUTPUT_BUFFER_SIZE );
+			info << osc::BeginMessage( "/emokit/info" )
+				<< (int)c.battery
+				<< c.cq.F3 << c.cq.FC6 << c.cq.P7 << c.cq.T8 << c.cq.F7 << c.cq.F8
+				<< c.cq.T7 << c.cq.P8 << c.cq.AF4 << c.cq.F4 << c.cq.AF3 << c.cq.O2 
+				<< c.cq.O1 << c.cq.FC5
+				<< osc::EndMessage;
+			transmitSocket.Send( info.Data(), info.Size() );
+			
 		}
 	}
 
+	fflush(stdout);
 	emokit_close(d);
 	emokit_delete(d);
 	return 0;
-
 }

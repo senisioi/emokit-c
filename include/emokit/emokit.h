@@ -21,6 +21,10 @@
 #define E_EMOKIT_NOT_INITED -2
 #define E_EMOKIT_NOT_OPENED -3
 
+#define EMOKIT_CONSUMER 0
+#define EMOKIT_RESEARCH 1
+
+
 #include <stdint.h>
 #if !defined(WIN32)
 #define EMOKIT_DECLSPEC
@@ -29,9 +33,11 @@
 #endif
 
 /// Vendor ID for all emotiv devices
-const static uint32_t EMOKIT_VID = 0x21a1;
+//const static uint32_t EMOKIT_VID = 0x21a1;
 /// Product ID for all emotiv devices
-const static uint32_t EMOKIT_PID = 0x0001;
+//const static uint32_t EMOKIT_PID = 0x0001;
+const static uint32_t EMOKIT_VID = 0x1234;
+const static uint32_t EMOKIT_PID = 0xed02;
 
 /// Out endpoint for all emotiv devices
 const static uint32_t EMOKIT_OUT_ENDPT = 0x02;
